@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum VehicleStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  RESERVED
+  SOLD
+  ARCHIVED
+}
+
+enum Fuel {
+  PETROL
+  DIESEL
+  HYBRID
+  ELECTRIC
+  LPG
+  CNG
+  OTHER
+}
+
+enum Transmission {
+  MANUAL
+  AUTOMATIC
+}
+
+enum Drive {
+  FWD
+  RWD
+  AWD
+  FOURX4
+}
+
+enum CostType {
+  TRANSPORT
+  REPAIR
+  CLEANING
+  PPMV
+  OTHER
+}
+
+enum LeadType {
+  IMPORT_REQUEST
+  BUYBACK
+  GENERAL
+}
+
+enum LeadSource {
+  WEB
+  MANUAL
+  WHATSAPP
+  FB
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ESTIMATE
+  IN_PROGRESS
+  CLOSED
+}
+
+model Vehicle {
+  id           String         @id @default(cuid())
+  slug         String         @unique
+  vin          String?        @unique
+  make         String
+  model        String
+  variant      String?
+  year         Int
+  mileageKm    Int
+  powerKw      Int
+  engineCc     Int?
+  fuel         Fuel
+  transmission Transmission
+  drive        Drive?
+  euroNorm     String?
+  co2          Int?
+  color        String?
+  equipment    Json?          // npr. ["ACC","LED","Kamera"]
+  damagesNotes String?
+  location     String?
+  status       VehicleStatus   @default(DRAFT)
+
+  purchasePrice Decimal        @db.Decimal(12,2)
+  totalCosts    Decimal        @default(0) @db.Decimal(12,2)
+  askingPrice   Decimal        @db.Decimal(12,2)
+  minPrice      Decimal?       @db.Decimal(12,2)
+
+  images  VehicleImage[]
+  costs   VehicleCost[]
+  leads   Lead[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VehicleImage {
+  id        String  @id @default(cuid())
+  vehicleId String
+  url       String
+  width     Int?
+  height    Int?
+  order     Int      @default(0)
+  isCover   Boolean  @default(false)
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+}
+
+model VehicleCost {
+  id        String   @id @default(cuid())
+  vehicleId String
+  type      CostType
+  vendorName String?
+  amount    Decimal  @db.Decimal(12,2)
+  note      String?
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id        String     @id @default(cuid())
+  type      LeadType
+  name      String
+  email     String?
+  phone     String?
+  message   String?
+  source    LeadSource @default(WEB)
+  status    LeadStatus @default(NEW)
+  attachments Json?
+  vehicleId String?
+
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+}
